@@ -1,15 +1,15 @@
 import { prisma } from "./prisma";
 
-export async function writeAuditLog(
+export async function createAuditLog(
+  userId: number | null,
   action: string,
-  userId?: number,
   ipAddress?: string,
   userAgent?: string
 ) {
   await prisma.auditLog.create({
     data: {
-      action,
       userId,
+      action,
       ipAddress,
       userAgent,
     },
