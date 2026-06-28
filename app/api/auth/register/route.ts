@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { prisma } from "@/app/lib/prisma";
 import { RegisterSchema } from "@/app/lib/validation";
 
 export async function POST(req: NextRequest) {
@@ -19,21 +21,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Validation passed.",
-      data: validation.data,
+    const { email } = validation.data;
+
+    // Check if email already exists
+    const existingEmail = await prisma.user.findUnique({
+      where: {
+        email,
+      },
     });
 
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid request.",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
+    if (existingEmail) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email already exists.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Email is available.",
+    });
+
+} catch (error) {
+  console.error("REGISTER API ERROR:");
+  console.error(error);
+
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Internal server error.",
+      error: error instanceof Error ? error.message : String(error),
+    },
+    {
+      status: 500,
+    }
+  );
+}
 }
