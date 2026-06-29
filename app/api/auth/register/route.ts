@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/app/lib/prisma";
 import { RegisterSchema } from "@/app/lib/validation";
+import { hashPassword } from "@/app/lib/password";
+import { createAuditLog } from "@/app/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,19 +17,18 @@ export async function POST(req: NextRequest) {
           success: false,
           errors: validation.error.flatten(),
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    const { email } = validation.data;
+    const {
+      email,
+      username,
+      password,
+    } = validation.data;
 
-    // Check if email already exists
     const existingEmail = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
     });
 
     if (existingEmail) {
@@ -36,30 +37,58 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Email already exists.",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Email is available.",
+    const existingUsername = await prisma.user.findUnique({
+      where: { username },
     });
 
-} catch (error) {
-  console.error("REGISTER API ERROR:");
-  console.error(error);
-
-  return NextResponse.json(
-    {
-      success: false,
-      message: "Internal server error.",
-      error: error instanceof Error ? error.message : String(error),
-    },
-    {
-      status: 500,
+    if (existingUsername) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Username already exists.",
+        },
+        { status: 409 }
+      );
     }
-  );
-}
+
+    const passwordHash = await hashPassword(password);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        username,
+        passwordHash,
+      },
+    });
+
+    await createAuditLog(
+      "USER_REGISTERED",
+      user.id,
+      req.headers.get("x-forwarded-for") ?? undefined,
+      req.headers.get("user-agent") ?? undefined
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Registration successful.",
+      },
+      { status: 201 }
+    );
+
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error.",
+      },
+      { status: 500 }
+    );
+  }
 }
