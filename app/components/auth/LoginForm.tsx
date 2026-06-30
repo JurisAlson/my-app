@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
+import { useRouter } from "next/navigation";
+
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
@@ -19,6 +21,8 @@ export default function LoginForm() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,8 +52,7 @@ export default function LoginForm() {
 
       setSuccess(data.message ?? "Login successful.");
 
-      setEmail("");
-      setPassword("");
+      router.push("/dashboard");
 
       // We'll add session handling and redirect later.
 
