@@ -4,6 +4,7 @@ import { prisma } from "@/app/lib/prisma";
 import { LoginSchema } from "@/app/lib/validation";
 import { verifyPassword } from "@/app/lib/password";
 import { createAuditLog } from "@/app/lib/audit";
+import { generateToken } from "@/app/lib/jwt";
 
 export async function POST(req: NextRequest) {
   try {
@@ -98,7 +99,15 @@ export async function POST(req: NextRequest) {
       req.headers.get("user-agent") ?? undefined
     );
 
-    return NextResponse.json({
+    // Generate JWT
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Create response
+    const response = NextResponse.json({
       success: true,
       message: "Login successful.",
       user: {
@@ -108,6 +117,19 @@ export async function POST(req: NextRequest) {
         role: user.role,
       },
     });
+
+    // Store JWT in HttpOnly cookie
+    response.cookies.set({
+      name: "token",
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return response;
 
   } catch (error) {
     console.error(error);
