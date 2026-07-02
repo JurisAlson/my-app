@@ -24,6 +24,10 @@ model User {
   isActive       Boolean  @default(true)
   emailVerified  Boolean  @default(false)
 
+  // Account lockout
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

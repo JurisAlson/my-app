@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-
 import { useRouter } from "next/navigation";
 
 import Card from "../ui/Card";
@@ -16,13 +15,41 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [lockedUntil, setLockedUntil] = useState<string | null>(null);
+  const [remainingTime, setRemainingTime] = useState<number>(0);
+
   const router = useRouter();
+
+  useEffect(() => {
+    if (!lockedUntil) return;
+
+    const updateTimer = () => {
+      const seconds = Math.max(
+        0,
+        Math.ceil(
+          (new Date(lockedUntil).getTime() - Date.now()) / 1000
+        )
+      );
+
+      setRemainingTime(seconds);
+
+      if (seconds === 0) {
+        setLockedUntil(null);
+        setError("");
+      }
+    };
+
+    updateTimer();
+
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockedUntil]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,6 +72,14 @@ export default function LoginForm() {
 
       const data = await response.json();
 
+      // Account locked
+      if (response.status === 423) {
+        setError(data.message);
+        setLockedUntil(data.lockedUntil);
+        return;
+      }
+
+      // Other errors
       if (!response.ok) {
         setError(data.message ?? "Login failed.");
         return;
@@ -53,9 +88,6 @@ export default function LoginForm() {
       setSuccess(data.message ?? "Login successful.");
 
       router.push("/dashboard");
-
-      // We'll add session handling and redirect later.
-
     } catch (err) {
       console.error(err);
       setError("Unable to connect to the server.");
@@ -63,6 +95,9 @@ export default function LoginForm() {
       setLoading(false);
     }
   }
+
+  const minutes = Math.floor(remainingTime / 60);
+  const seconds = remainingTime % 60;
 
   return (
     <Card>
@@ -78,7 +113,14 @@ export default function LoginForm() {
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-500 bg-red-500/20 p-3 text-red-300">
-          {error}
+          <p>{error}</p>
+
+          {lockedUntil && (
+            <p className="mt-2 font-semibold">
+              Try again in{" "}
+              {minutes}:{seconds.toString().padStart(2, "0")}
+            </p>
+          )}
         </div>
       )}
 
@@ -89,7 +131,6 @@ export default function LoginForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-
         <div>
           <label className="mb-2 block text-sm text-slate-300">
             Email
@@ -102,6 +143,7 @@ export default function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={remainingTime > 0}
           />
         </div>
 
@@ -111,7 +153,6 @@ export default function LoginForm() {
           </label>
 
           <div className="relative">
-
             <Input
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
@@ -119,6 +160,7 @@ export default function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={remainingTime > 0}
             />
 
             <button
@@ -128,21 +170,17 @@ export default function LoginForm() {
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
-
           </div>
         </div>
 
         <div className="flex items-center justify-between text-sm">
-
           <label className="flex items-center gap-2 text-slate-300">
-
             <input
               type="checkbox"
               className="accent-cyan-500"
             />
 
             Remember Me
-
           </label>
 
           <Link
@@ -151,20 +189,23 @@ export default function LoginForm() {
           >
             Forgot Password?
           </Link>
-
         </div>
 
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || remainingTime > 0}
         >
-          {loading ? "Signing In..." : "Sign In"}
+          {loading
+            ? "Signing In..."
+            : remainingTime > 0
+            ? `Locked (${minutes}:${seconds
+                .toString()
+                .padStart(2, "0")})`
+            : "Sign In"}
         </Button>
-
       </form>
 
       <div className="my-8 flex items-center">
-
         <div className="h-px flex-1 bg-slate-700" />
 
         <span className="mx-3 text-sm text-slate-500">
@@ -172,22 +213,17 @@ export default function LoginForm() {
         </span>
 
         <div className="h-px flex-1 bg-slate-700" />
-
       </div>
 
       <p className="text-center text-slate-400">
-
         Don't have an account?{" "}
-
         <Link
           href="/register"
           className="font-semibold text-cyan-400 hover:underline"
         >
           Create Account
         </Link>
-
       </p>
-
     </Card>
   );
 }
