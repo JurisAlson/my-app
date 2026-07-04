@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
+import { generateCsrfToken } from "@/app/lib/csrf";
 import { prisma } from "@/app/lib/prisma";
 import { LoginSchema } from "@/app/lib/validation";
 import { verifyPassword } from "@/app/lib/password";
@@ -194,40 +194,54 @@ if (failedAttempts >= 5) {
       req.headers.get("user-agent") ?? undefined
     );
 
-    // Generate JWT
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
+// Generate JWT
+const token = generateToken({
+  id: user.id,
+  email: user.email,
+  role: user.role,
+});
 
-    // Create response
-    const response = NextResponse.json({
-      success: true,
-      message: "Login successful.",
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-      },
-    });
+// Generate CSRF token
+const csrfToken = generateCsrfToken();
 
-    // Store JWT in HttpOnly cookie
-    response.cookies.set({
-      name: "token",
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+// Create response
+const response = NextResponse.json({
+  success: true,
+  message: "Login successful.",
+  user: {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+  },
+});
 
-    // Reset IP rate limiter
-    resetRateLimit(ip);
+// Store JWT in HttpOnly cookie
+response.cookies.set({
+  name: "token",
+  value: token,
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 7, // 7 days
+});
 
-    return response;
+// Store CSRF token
+response.cookies.set({
+  name: "csrf-token",
+  value: csrfToken,
+  httpOnly: false,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 7, // 7 days
+});
+
+// Reset IP rate limiter
+resetRateLimit(ip);
+
+return response;
   } catch (error) {
     console.error(error);
 
