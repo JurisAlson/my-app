@@ -21,7 +21,7 @@ export default function LoginForm() {
   const [success, setSuccess] = useState("");
 
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
-  const [remainingTime, setRemainingTime] = useState<number>(0);
+  const [remainingTime, setRemainingTime] = useState(0);
 
   const router = useRouter();
 
@@ -31,9 +31,7 @@ export default function LoginForm() {
     const updateTimer = () => {
       const seconds = Math.max(
         0,
-        Math.ceil(
-          (new Date(lockedUntil).getTime() - Date.now()) / 1000
-        )
+        Math.ceil((new Date(lockedUntil).getTime() - Date.now()) / 1000)
       );
 
       setRemainingTime(seconds);
@@ -72,14 +70,12 @@ export default function LoginForm() {
 
       const data = await response.json();
 
-      // Account locked
       if (response.status === 423) {
         setError(data.message);
         setLockedUntil(data.lockedUntil);
         return;
       }
 
-      // Other errors
       if (!response.ok) {
         setError(data.message ?? "Login failed.");
         return;
@@ -101,22 +97,22 @@ export default function LoginForm() {
 
   return (
     <Card>
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-white">
-          SecureAuth
-        </h1>
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold text-white">
+          Welcome Back
+        </h2>
 
-        <p className="mt-2 text-slate-400">
-          Secure Authentication Portal
+        <p className="mt-2 text-sm text-slate-400">
+          Sign in to access your account.
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500 bg-red-500/20 p-3 text-red-300">
+        <div className="mt-6 rounded-lg border border-red-500 bg-red-500/10 p-4 text-sm text-red-300">
           <p>{error}</p>
 
           {lockedUntil && (
-            <p className="mt-2 font-semibold">
+            <p className="mt-2 font-medium">
               Try again in{" "}
               {minutes}:{seconds.toString().padStart(2, "0")}
             </p>
@@ -125,20 +121,24 @@ export default function LoginForm() {
       )}
 
       {success && (
-        <div className="mb-4 rounded-lg border border-green-500 bg-green-500/20 p-3 text-green-300">
+        <div className="mt-6 rounded-lg border border-green-500 bg-green-500/10 p-4 text-sm text-green-300">
           {success}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div>
-          <label className="mb-2 block text-sm text-slate-300">
-            Email
+          <label
+            htmlFor="email"
+            className="mb-2 block text-sm font-medium text-slate-200"
+          >
+            Email Address
           </label>
 
           <Input
+            id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="Enter your email"
             autoComplete="email"
             required
             value={email}
@@ -148,12 +148,16 @@ export default function LoginForm() {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-slate-300">
+          <label
+            htmlFor="password"
+            className="mb-2 block text-sm font-medium text-slate-200"
+          >
             Password
           </label>
 
           <div className="relative">
             <Input
+              id="password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               autoComplete="current-password"
@@ -166,7 +170,7 @@ export default function LoginForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-white"
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
@@ -179,13 +183,12 @@ export default function LoginForm() {
               type="checkbox"
               className="accent-cyan-500"
             />
-
             Remember Me
           </label>
 
           <Link
             href="/forgot-password"
-            className="text-cyan-400 hover:underline"
+            className="text-cyan-400 transition hover:underline"
           >
             Forgot Password?
           </Link>
@@ -208,18 +211,18 @@ export default function LoginForm() {
       <div className="my-8 flex items-center">
         <div className="h-px flex-1 bg-slate-700" />
 
-        <span className="mx-3 text-sm text-slate-500">
-          OR
+        <span className="mx-3 text-xs uppercase tracking-wider text-slate-500">
+          Or
         </span>
 
         <div className="h-px flex-1 bg-slate-700" />
       </div>
 
-      <p className="text-center text-slate-400">
+      <p className="text-center text-sm text-slate-400">
         Don't have an account?{" "}
         <Link
           href="/register"
-          className="font-semibold text-cyan-400 hover:underline"
+          className="font-medium text-cyan-400 transition hover:underline"
         >
           Create Account
         </Link>
