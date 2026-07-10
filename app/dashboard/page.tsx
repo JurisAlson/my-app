@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { getCsrfToken } from "@/app/lib/getCsrfToken";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -8,6 +9,9 @@ export default function DashboardPage() {
   async function handleLogout() {
     const response = await fetch("/api/auth/logout", {
       method: "POST",
+      headers: {
+        "X-CSRF-Token": getCsrfToken(),
+      },
     });
 
     if (response.ok) {
